@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-slate-200 text-slate-800">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskMaster Pro - Tâches & Aide-mémoire</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- jsPDF & AutoTable pour la génération de PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              700: '#1e40af',
+            },
+            accent: {
+              500: '#7c3aed',
+              600: '#6d28d9',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(226, 232, 240, 0.8);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.8);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 1);
+    }
+    .glass-card {
+      background: #ffffff;
+      border: 1px solid rgba(203, 213, 225, 0.8);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+    .glass-card:hover {
+      border-color: rgba(148, 163, 184, 0.9);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+    }
+    .pulse-record {
+      animation: pulse-red 1.5s infinite;
+    }
+    @keyframes pulse-red {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans antialiased text-slate-800 bg-slate-200">
+
+  <!-- TOP HEADER -->
+  <header class="border-b border-slate-300 bg-white/90 backdrop-blur sticky top-0 z-30 px-4 py-3 sm:px-6 shadow-sm">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-accent-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20 font-bold text-xl">
+          <i class="fa-solid fa-check-double"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            TaskMaster <span class="text-xs px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 border border-brand-300 font-semibold">Pro</span>
+          </h1>
+          <p class="text-xs text-slate-600">Vos tâches, vos étapes, vos notes & traçabilité.</p>
+        </div>
+      </div>
+
+      <!-- Action Toolbar -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <button id="btnVoiceDictation" onclick="toggleVoiceModal()" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-medium border border-slate-300 transition flex items-center gap-2 shadow-sm">
+          <i class="fa-solid fa-microphone text-rose-500"></i>
+          <span>Dictée vocale</span>
+        </button>
+
+        <!-- BOUTON EXPORT PDF -->
+        <button onclick="exportPDF()" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-medium border border-slate-300 transition flex items-center gap-2 shadow-sm" title="Exporter un rapport PDF">
+          <i class="fa-solid fa-file-pdf text-rose-600"></i>
+          <span class="hidden sm:inline">PDF</span>
+        </button>
+
+        <button onclick="exportData()" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-medium border border-slate-300 transition flex items-center gap-2 shadow-sm">
+          <i class="fa-solid fa-download text-emerald-600"></i>
+          <span class="hidden sm:inline">JSON</span>
+        </button>
+
+        <label class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-medium border border-slate-300 transition cursor-pointer flex items-center gap-2 shadow-sm">
+          <i class="fa-solid fa-upload text-sky-600"></i>
+          <span class="hidden sm:inline">Importer</span>
+          <input type="file" id="importFileInput" accept=".json" onchange="importData(event)" class="hidden">
+        </label>
+
+        <button onclick="openModal('task')" class="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-medium shadow-md shadow-brand-600/30 transition flex items-center gap-2">
+          <i class="fa-solid fa-plus"></i>
+          <span>Nouveau</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN WRAPPER -->
+  <div class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- ADDITIVE QUICK TO-DO LIST (SANS DÉTAIL) -->
+    <div class="glass-card rounded-2xl p-4 bg-white border border-slate-300 shadow-sm space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-bolt text-amber-500"></i>
+          <span>Liste To-Do Rapide Additive (Sans détail)</span>
+        </h3>
+        <span id="quickTodoBadge" class="text-xs bg-slate-100 text-slate-600 border border-slate-300 px-2 py-0.5 rounded-full font-semibold">0 tâche</span>
+      </div>
+
+      <!-- Input Form -->
+      <form onsubmit="addQuickTodo(event)" class="flex gap-2">
+        <input type="text" id="quickTodoInput" placeholder="Saisissez une tâche rapide et appuyez sur Entrée..." class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+        <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow">
+          <i class="fa-solid fa-plus"></i>
+          <span>Ajouter</span>
+        </button>
+      </form>
+
+      <!-- Quick Todos Container -->
+      <div id="quickTodoList" class="flex flex-wrap gap-2 pt-1"></div>
+    </div>
+
+    <!-- STATS COUNTERS BAR -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
+      <div onclick="setFilter('today')" class="glass-card rounded-xl p-4 cursor-pointer hover:border-sky-500 transition">
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Aujourd’hui</span>
+          <i class="fa-regular fa-calendar-check text-sky-600 text-lg"></i>
+        </div>
+        <div class="text-2xl font-bold mt-2 text-slate-900" id="statToday">0</div>
+      </div>
+
+      <div onclick="setFilter('overdue')" class="glass-card rounded-xl p-4 cursor-pointer hover:border-rose-500 transition">
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">En retard</span>
+          <i class="fa-solid fa-triangle-exclamation text-rose-600 text-lg"></i>
+        </div>
+        <div class="text-2xl font-bold mt-2 text-rose-600" id="statOverdue">0</div>
+      </div>
+
+      <div onclick="setFilter('high')" class="glass-card rounded-xl p-4 cursor-pointer hover:border-amber-500 transition">
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Priorité élevée</span>
+          <i class="fa-solid fa-fire text-amber-600 text-lg"></i>
+        </div>
+        <div class="text-2xl font-bold mt-2 text-slate-900" id="statHigh">0</div>
+      </div>
+
+      <div onclick="setFilter('completed')" class="glass-card rounded-xl p-4 cursor-pointer hover:border-emerald-500 transition">
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Terminées</span>
+          <i class="fa-regular fa-circle-check text-emerald-600 text-lg"></i>
+        </div>
+        <div class="text-2xl font-bold mt-2 text-slate-900" id="statCompleted">0</div>
+      </div>
+
+      <div onclick="switchTab('notes')" class="glass-card rounded-xl p-4 cursor-pointer hover:border-purple-500 transition col-span-2 sm:col-span-1">
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Notes & Traçabilité</span>
+          <i class="fa-solid fa-box-archive text-purple-600 text-lg"></i>
+        </div>
+        <div class="text-2xl font-bold mt-2 text-purple-700" id="statNotes">0</div>
+      </div>
+    </div>
+
+    <!-- TAB NAVIGATION & SEARCH CONTROLS -->
+    <div class="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between border-b border-slate-300 pb-4">
+      
+      <!-- Module Switcher Tabs -->
+      <div class="flex bg-slate-300 p-1 rounded-xl border border-slate-300 w-full md:w-auto">
+        <button id="tabBtnTasks" onclick="switchTab('tasks')" class="flex-1 md:flex-none px-5 py-2 rounded-lg font-medium text-sm transition flex items-center justify-center gap-2 bg-brand-600 text-white shadow">
+          <i class="fa-solid fa-list-check"></i>
+          <span>📋 Tâches & Projets</span>
+        </button>
+        <button id="tabBtnNotes" onclick="switchTab('notes')" class="flex-1 md:flex-none px-5 py-2 rounded-lg font-medium text-sm transition flex items-center justify-center gap-2 text-slate-700 hover:text-slate-900 font-semibold">
+          <i class="fa-solid fa-brain"></i>
+          <span>🧠 Notes & Aide-mémoire</span>
+        </button>
+      </div>
+
+      <!-- Unified Search & Filter -->
+      <div class="flex flex-1 max-w-xl gap-2">
+        <div class="relative flex-1">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Rechercher une tâche, un emplacement (#classement), etc..." class="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-500 shadow-sm transition">
+        </div>
+        
+        <!-- Filter dropdown for tasks -->
+        <select id="filterSelect" onchange="setFilter(this.value)" class="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-brand-500 shadow-sm cursor-pointer">
+          <option value="all">Toutes les tâches</option>
+          <option value="today">Aujourd’hui et retards</option>
+          <option value="high">Priorité élevée</option>
+          <option value="completed">Terminées</option>
+        </select>
+      </div>
+
+    </div>
+
+    <!-- VIEW 1: TASKS & PROJECTS MODULE -->
+    <main id="viewTasks" class="space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <span>Tâches courantes</span>
+          <span id="taskCountBadge" class="text-xs bg-slate-300 text-slate-700 px-2 py-0.5 rounded-full border border-slate-400 font-bold">0</span>
+        </h2>
+        <div class="text-xs text-slate-600 font-medium" id="filterStatusLabel">Affichage: Toutes</div>
+      </div>
+
+      <!-- Tasks List Container -->
+      <div id="tasksList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+      <!-- Empty state for tasks -->
+      <div id="tasksEmpty" class="hidden glass-card rounded-2xl p-12 text-center space-y-4 max-w-md mx-auto my-8 border-slate-300">
+        <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mx-auto text-slate-500 text-2xl">
+          <i class="fa-solid fa-clipboard-list"></i>
+        </div>
+        <h3 class="text-slate-800 font-semibold">Aucune tâche trouvée</h3>
+        <p class="text-slate-600 text-sm">Vous n'avez aucune tâche correspondant aux critères actuels.</p>
+        <button onclick="openModal('task')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition inline-flex items-center gap-2 shadow-md">
+          <i class="fa-solid fa-plus"></i>
+          <span>Créer une tâche</span>
+        </button>
+      </div>
+    </main>
+
+    <!-- VIEW 2: NOTES & AIDE-MÉMOIRE / TRAÇABILITÉ MODULE -->
+    <main id="viewNotes" class="space-y-4 hidden">
+      <div class="glass-card rounded-xl p-4 space-y-3 bg-white border-slate-300">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <h2 class="text-lg font-bold text-slate-900">Carnet d'Aide-mémoire & Emplacements</h2>
+            <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-300 font-medium">Indépendant des dates</span>
+          </div>
+          <button onclick="openModal('note')" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow">
+            <i class="fa-solid fa-plus"></i>
+            <span>Ajouter une note</span>
+          </button>
+        </div>
+        <p class="text-xs text-slate-600">Conservez la traçabilité de vos documents physiquement ou numériquement, vos références, vos paramètres ou mémos libres.</p>
+
+        <!-- Tag Filters -->
+        <div class="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-200" id="tagsFilterContainer">
+          <span class="text-xs text-slate-500 font-medium mr-1">Filtrer par étiquette :</span>
+          <button onclick="filterNotesByTag(null)" class="px-2.5 py-1 rounded-md text-xs font-medium bg-brand-600 text-white tag-btn" data-tag="all">Tous</button>
+        </div>
+      </div>
+
+      <!-- Notes Grid -->
+      <div id="notesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+      <!-- Empty state for notes -->
+      <div id="notesEmpty" class="hidden glass-card rounded-2xl p-12 text-center space-y-4 max-w-md mx-auto my-8 border-slate-300">
+        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto text-purple-600 text-2xl border border-purple-200">
+          <i class="fa-solid fa-brain"></i>
+        </div>
+        <h3 class="text-slate-800 font-semibold">Aucune note dans le carnet</h3>
+        <p class="text-slate-600 text-sm">Créez des notes permanentes pour enregistrer le classement de vos dossiers, des mots-clés, des procédures ou du matos.</p>
+        <button onclick="openModal('note')" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition inline-flex items-center gap-2 shadow">
+          <i class="fa-solid fa-plus"></i>
+          <span>Créer une note de traçabilité</span>
+        </button>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- MODAL: CREATE / EDIT (TASK OR NOTE) -->
+  <div id="itemModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-card w-full max-w-lg rounded-2xl border border-slate-300 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] bg-white">
+      
+      <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+        <div class="flex items-center gap-3">
+          <div class="flex bg-slate-200 p-1 rounded-lg border border-slate-300 text-xs">
+            <button id="modalTypeTaskBtn" onclick="setModalType('task')" class="px-3 py-1 rounded-md font-semibold text-white bg-brand-600">📋 Tâche</button>
+            <button id="modalTypeNoteBtn" onclick="setModalType('note')" class="px-3 py-1 rounded-md font-semibold text-slate-600 hover:text-slate-900">🧠 Note libre</button>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="itemForm" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4 overflow-y-auto flex-1 bg-white">
+        <input type="hidden" id="editItemId" value="">
+        <input type="hidden" id="itemTypeInput" value="task">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Titre <span class="text-rose-500">*</span></label>
+          <div class="relative">
+            <input type="text" id="formTitle" required placeholder="Ex: Ranger contrat d'assurance..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+            <button type="button" onclick="startFormVoice('formTitle')" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-rose-500" title="Dictée vocale">
+              <i class="fa-solid fa-microphone"></i>
+            </button>
+          </div>
+        </div>
+
+        <div id="taskFields" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Date d'échéance</label>
+              <input type="date" id="formDueDate" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Priorité</label>
+              <select id="formPriority" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                <option value="low">Basse</option>
+                <option value="medium" selected>Moyenne</option>
+                <option value="high">🔥 Élevée</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Projet / Catégorie</label>
+            <input type="text" id="formProject" placeholder="Ex: Maison, Travail, Administratif" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Étapes à réaliser (Subtasks)</label>
+            <div id="subtasksContainer" class="space-y-2 mb-2"></div>
+            <div class="flex gap-2">
+              <input type="text" id="newSubtaskInput" placeholder="Ajouter une sous-étape..." class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none">
+              <button type="button" onclick="addSubtaskFromInput()" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-medium border border-slate-300">Ajouter</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label id="formContentLabel" class="block text-xs font-bold text-rose-600 uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-comment-dots"></i>
+              <span>OBSERVATION / DESCRIPTION (EN ROUGE VIF)</span>
+            </label>
+            <span class="text-[10px] text-slate-400">Texte / Notes</span>
+          </div>
+          <div class="relative">
+            <textarea id="formContent" rows="4" placeholder="Entrez le détail, l'observation, l'emplacement précis..." class="w-full bg-red-50/40 border border-red-300 rounded-xl p-3 text-sm text-rose-600 placeholder-red-300 focus:outline-none focus:border-red-500 focus:bg-red-50/60 font-medium"></textarea>
+            <button type="button" onclick="startFormVoice('formContent')" class="absolute right-3 bottom-3 text-rose-400 hover:text-rose-600 p-1" title="Dicter la description">
+              <i class="fa-solid fa-microphone"></i>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Étiquettes (séparées par des virgules)</label>
+          <input type="text" id="formTags" placeholder="Ex: classeur, maison, auto, impôts, urgent" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+        </div>
+
+        <div id="notePinField" class="hidden flex items-center gap-2 pt-2">
+          <input type="checkbox" id="formPinned" class="rounded bg-slate-100 border-slate-300 text-purple-600 focus:ring-purple-500">
+          <label for="formPinned" class="text-xs text-slate-700 cursor-pointer select-none font-medium">📌 Épingler en haut de la liste des notes</label>
+        </div>
+
+        <div class="pt-4 flex justify-end gap-3 border-t border-slate-200">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition border border-slate-300">Annuler</button>
+          <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl shadow-md shadow-brand-600/30 transition">Enregistrer</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- VOICE DICTATION MODAL -->
+  <div id="voiceModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-card w-full max-w-md rounded-2xl border border-slate-300 p-6 text-center space-y-4 bg-white">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h3 class="font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-microphone text-rose-500"></i>
+          <span>Dictée Vocale Intelligente</span>
+        </h3>
+        <button onclick="toggleVoiceModal()" class="text-slate-400 hover:text-slate-700">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="py-6 flex flex-col items-center justify-center">
+        <button id="voiceMicBtn" onclick="toggleSpeechRecognition()" class="w-20 h-20 rounded-full bg-rose-100 text-rose-600 border border-rose-300 flex items-center justify-center text-3xl shadow-lg transition transform hover:scale-105">
+          <i class="fa-solid fa-microphone"></i>
+        </button>
+        <p id="voiceStatusText" class="mt-4 text-xs font-semibold text-slate-600">Cliquez sur le micro pour commencer à parler...</p>
+      </div>
+
+      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-left text-xs min-h-[80px] max-h-[150px] overflow-y-auto text-slate-700" id="voiceTranscript">
+        <em>Le texte transcrit s'affichera ici en temps réel...</em>
+      </div>
+
+      <div class="flex gap-2 justify-end pt-2">
+        <button onclick="applyVoiceToNewTask()" class="flex-1 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow">
+          ➕ Créer une tâche
+        </button>
+        <button onclick="applyVoiceToNewNote()" class="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-xl shadow">
+          🧠 Créer une note
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- APPLICATION LOGIC JS -->
+  <script>
+    const STORAGE_KEY = 'taskmaster_pro_data_v3';
+
+    let state = {
+      activeTab: 'tasks',
+      currentFilter: 'all',
+      activeTagFilter: null,
+      searchQuery: '',
+      tasks: [
+        {
+          "id": "t-1794322386737",
+          "title": "AUTORISATION NOUVELLE PRODUITS CHIMIQUE",
+          "content": "VERIFICATION DES APPELATION FDS AVEC PPI ET PROFORMAT",
+          "dueDate": "2026-11-20",
+          "priority": "medium",
+          "project": "SUIVI",
+          "tags": [],
+          "completed": false,
+          "subtasks": [
+            { "id": "st-1794322324313pma5", "text": "DEMENDE FDS FOURNISSEUR", "completed": true },
+            { "id": "st-17943223371291qyk", "text": "ENVOYER AU CHIMISTE POUR VERIFICATION", "completed": true },
+            { "id": "st-1794322369249py1b", "text": "DEMANDE AUTORISATION", "completed": false },
+            { "id": "st-1794322385321nmra", "text": "CLASSEMENT DES FDS DANS UN DOSSIER", "completed": false }
+          ]
+        },
+        {
+          "id": "t-1794322242481",
+          "title": "AUTORISATION EPOXY",
+          "content": "TRES URGENT",
+          "dueDate": "2026-11-15",
+          "priority": "high",
+          "project": "SUIVI",
+          "tags": ["tres urgent"],
+          "completed": false,
+          "subtasks": []
+        },
+        {
+          "id": "t-1794322178241",
+          "title": "SITUATION REYAD",
+          "content": "A METTRE UNE PLACE METHODE",
+          "dueDate": "",
+          "priority": "medium",
+          "project": "",
+          "tags": [],
+          "completed": false,
+          "subtasks": []
+        },
+        {
+          "id": "t-1794322149209",
+          "title": "SITUATION DSM TGM",
+          "content": "",
+          "dueDate": "2026-11-20",
+          "priority": "medium",
+          "project": "RAPPROCHEMENT",
+          "tags": [],
+          "completed": false,
+          "subtasks": [
+            { "id": "st-1794322132625zwqx", "text": "LES RECEPTION GDS", "completed": false },
+            { "id": "st-1794322140833aehg", "text": "LES RECEPTION MAGASIN", "completed": false },
+            { "id": "st-1794322148161d7b5", "text": "LES CONTENEUR", "completed": false }
+          ]
+        },
+        {
+          "id": "t-1794321987658",
+          "title": "ANALYSE ACTIVITE",
+          "content": "",
+          "dueDate": "2026-11-20",
+          "priority": "high",
+          "project": "ANALYSE",
+          "tags": [],
+          "completed": false,
+          "subtasks": [
+            { "id": "st-1794321935497gx9d", "text": "RCAP CAISSE DEPENSE /RECETTE", "completed": false },
+            { "id": "st-17943219475855dyk", "text": "RCAP VENTE /ACHAT", "completed": false },
+            { "id": "st-1794321963857tabs", "text": "ANALYSE STOCKE PRODUCTION /VENTE", "completed": false },
+            { "id": "st-17943219860979m1t", "text": "ETAT DE STOCK", "completed": false }
+          ]
+        },
+        {
+          "id": "t-1794321871193",
+          "title": "MATRICE PREVESION",
+          "content": "",
+          "dueDate": "2026-11-20",
+          "priority": "medium",
+          "project": "OPTIMISATION ACHAT",
+          "tags": [],
+          "completed": false,
+          "subtasks": [
+            { "id": "st-1794321857257dse7", "text": "PRAPRER UN MODEL EXEL POUR SAMI", "completed": false },
+            { "id": "st-1794321869562ig02", "text": "DEVELOPER APPLICATION", "completed": false }
+          ]
+        },
+        {
+          "id": "t-1794321775449",
+          "title": "HOMOLOGATION COMPTEUR D'EAU",
+          "content": "",
+          "dueDate": "2026-11-15",
+          "priority": "high",
+          "project": "dossier administratif",
+          "tags": [],
+          "completed": false,
+          "subtasks": [
+            { "id": "st-17943217247290fot", "text": "consultation ONML", "completed": true },
+            { "id": "st-1794321734993xl0y", "text": "DETERMINER LA PROCEDURE", "completed": true },
+            { "id": "st-17943217507457rr8", "text": "PREPARATION DOSSIER", "completed": false },
+            { "id": "st-1794321764161u67y", "text": "VERIFECATION DOS", "completed": false },
+            { "id": "st-1794321771169orwx", "text": "DEPOT DE DOSSIER", "completed": false }
+          ]
+        },
+        {
+          "id": "t-1794321555697",
+          "title": "EVALUATION FOURNISSEUR",
+          "content": "EVALUATION OK FAITE",
+          "dueDate": "2026-11-12",
+          "priority": "high",
+          "project": "AUDIT",
+          "tags": ["urgent"],
+          "completed": false,
+          "subtasks": [
+            { "id": "st-1794321525401lea8", "text": "EVALUATION FOURNISSEUR", "completed": true },
+            { "id": "st-17943215373060tmn", "text": "ENGAGEMENT QHSE", "completed": false },
+            { "id": "st-1794321544529q0q2", "text": "SUIVI DOSSIER", "completed": false }
+          ]
+        },
+        {
+          "id": "t-1794321336722",
+          "title": "VERIFECATION PANNEAU SANDWICHE",
+          "content": "",
+          "dueDate": "2026-11-11",
+          "priority": "medium",
+          "project": "SUIVI ACHAT",
+          "tags": [],
+          "completed": false,
+          "subtasks": [
+            { "id": "st-179432132258655z3", "text": "LIVRAISON RECU", "completed": true },
+            { "id": "st-17943216406650074", "text": "RAPPROCHEMENT", "completed": false }
+          ]
+        }
+      ],
+      notes: [],
+      quickTodos: []
+    };
+
+    let modalSubtasks = [];
+    let recognition = null;
+    let isListening = false;
+    let currentVoiceTargetInput = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      initSpeechRecognition();
+      render();
+    });
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        tasks: state.tasks,
+        notes: state.notes,
+        quickTodos: state.quickTodos
+      }));
+      renderStats();
+    }
+
+    function loadState() {
+      const savedV3 = localStorage.getItem(STORAGE_KEY);
+      if (savedV3) {
+        try {
+          const parsed = JSON.parse(savedV3);
+          state.tasks = parsed.tasks || state.tasks;
+          state.notes = parsed.notes || [];
+          state.quickTodos = parsed.quickTodos || [];
+        } catch(e) {
+          console.error("Erreur chargement v3", e);
+        }
+      } else {
+        saveState();
+      }
+    }
+
+    // FONCTION EXPORT PDF
+    function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+      const dateStr = new Date().toLocaleDateString('fr-FR', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+
+      // En-tête du document
+      doc.setFillColor(37, 99, 235); // Bleu Brand
+      doc.rect(0, 0, 210, 20, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text("TaskMaster Pro - Rapport des Tâches & Notes", 14, 13);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Généré le : ${dateStr}`, 145, 13);
+
+      let finalY = 25;
+
+      // Section 1: Tableau des Tâches
+      doc.setTextColor(30, 41, 59);
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text("1. Liste des Tâches", 14, finalY);
+      finalY += 4;
+
+      const tasksData = state.tasks.map(t => {
+        const subStrs = (t.subtasks || []).map(s => `${s.completed ? '[X]' : '[ ]'} ${s.text}`).join('\n');
+        const prio = t.priority === 'high' ? 'Élevée' : t.priority === 'medium' ? 'Moyenne' : 'Basse';
+        const status = t.completed ? 'Terminée' : 'En cours';
+
+        let details = t.content ? `Obs: ${t.content}` : '';
+        if (subStrs) details += (details ? '\n' : '') + `Étapes:\n${subStrs}`;
+
+        return [
+          t.title,
+          t.project || '-',
+          prio,
+          t.dueDate || 'Sans date',
+          status,
+          details || '-'
+        ];
+      });
+
+      doc.autoTable({
+        startY: finalY,
+        head: [['Titre', 'Projet', 'Priorité', 'Échéance', 'Statut', 'Détails & Étapes']],
+        body: tasksData,
+        theme: 'striped',
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+        bodyStyles: { fontSize: 8, cellPadding: 2.5 },
+        columnStyles: {
+          0: { cellWidth: 40, fontStyle: 'bold' },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 20 },
+          3: { cellWidth: 22 },
+          4: { cellWidth: 20 },
+          5: { cellWidth: 'auto' }
+        },
+        didParseCell: function(data) {
+          if (data.section === 'body' && data.column.index === 2) {
+            if (data.cell.raw === 'Élevée') {
+              data.cell.styles.textColor = [220, 38, 38];
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        }
+      });
+
+      finalY = doc.lastAutoTable.finalY + 10;
+
+      // Section 2: Carnet de Notes & Traçabilité (si existantes)
+      if (state.notes && state.notes.length > 0) {
+        if (finalY > 240) {
+          doc.addPage();
+          finalY = 20;
+        }
+
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.text("2. Carnet d'Aide-mémoire & Traçabilité", 14, finalY);
+        finalY += 4;
+
+        const notesData = state.notes.map(n => [
+          n.title,
+          (n.tags || []).map(t => '#' + t).join(', ') || '-',
+          n.content || '-'
+        ]);
+
+        doc.autoTable({
+          startY: finalY,
+          head: [['Titre', 'Étiquettes', 'Contenu / Emplacement']],
+          body: notesData,
+          theme: 'grid',
+          headStyles: { fillColor: [124, 58, 237], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+          bodyStyles: { fontSize: 8, cellPadding: 2.5 },
+          columnStyles: {
+            0: { cellWidth: 55, fontStyle: 'bold' },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 'auto' }
+          }
+        });
+      }
+
+      // Téléchargement du fichier PDF
+      doc.save(`TaskMaster_Rapport_${new Date().toISOString().split('T')[0]}.pdf`);
+      showToast("Rapport PDF généré avec succès !", "success");
+    }
+
+    // LISTE DE TO-DO RAPIDE
+    function addQuickTodo(e) {
+      e.preventDefault();
+      const input = document.getElementById('quickTodoInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      state.quickTodos.unshift({
+        id: 'qt-' + Date.now(),
+        text: text,
+        completed: false
+      });
+      input.value = '';
+      saveState();
+      renderQuickTodos();
+      showToast("Ajouté à la To-Do rapide !", "success");
+    }
+
+    function toggleQuickTodo(id) {
+      const item = state.quickTodos.find(q => q.id === id);
+      if (item) {
+        item.completed = !item.completed;
+        saveState();
+        renderQuickTodos();
+      }
+    }
+
+    function deleteQuickTodo(id) {
+      state.quickTodos = state.quickTodos.filter(q => q.id !== id);
+      saveState();
+      renderQuickTodos();
+    }
+
+    function renderQuickTodos() {
+      const container = document.getElementById('quickTodoList');
+      const badge = document.getElementById('quickTodoBadge');
+      
+      const count = state.quickTodos.length;
+      badge.innerText = `${count} tâche${count > 1 ? 's' : ''}`;
+
+      if (count === 0) {
+        container.innerHTML = '<span class="text-xs text-slate-400 italic py-1">Aucune tâche rapide. Saisissez-en une ci-dessus !</span>';
+        return;
+      }
+
+      container.innerHTML = state.quickTodos.map(item => `
+        <div class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200/80 border border-slate-300 rounded-lg px-3 py-1.5 transition text-xs group shadow-sm ${item.completed ? 'opacity-60 bg-slate-200/50' : ''}">
+          <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleQuickTodo('${item.id}')" class="w-3.5 h-3.5 rounded border-slate-400 text-brand-600 focus:ring-brand-500 cursor-pointer">
+          <span class="font-medium text-slate-800 ${item.completed ? 'line-through text-slate-500' : ''}">${escapeHtml(item.text)}</span>
+          <button onclick="deleteQuickTodo('${item.id}')" class="text-slate-400 hover:text-rose-600 ml-1 opacity-80 group-hover:opacity-100 transition">
+            <i class="fa-solid fa-xmark text-xs"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // NAVIGATION
+    function switchTab(tab) {
+      state.activeTab = tab;
+      const tabTasks = document.getElementById('tabBtnTasks');
+      const tabNotes = document.getElementById('tabBtnNotes');
+      const viewTasks = document.getElementById('viewTasks');
+      const viewNotes = document.getElementById('viewNotes');
+      const filterSelect = document.getElementById('filterSelect');
+
+      if (tab === 'tasks') {
+        tabTasks.className = "flex-1 md:flex-none px-5 py-2 rounded-lg font-medium text-sm transition flex items-center justify-center gap-2 bg-brand-600 text-white shadow";
+        tabNotes.className = "flex-1 md:flex-none px-5 py-2 rounded-lg font-medium text-sm transition flex items-center justify-center gap-2 text-slate-700 hover:text-slate-900 font-semibold";
+        viewTasks.classList.remove('hidden');
+        viewNotes.classList.add('hidden');
+        filterSelect.classList.remove('hidden');
+      } else {
+        tabNotes.className = "flex-1 md:flex-none px-5 py-2 rounded-lg font-medium text-sm transition flex items-center justify-center gap-2 bg-purple-600 text-white shadow";
+        tabTasks.className = "flex-1 md:flex-none px-5 py-2 rounded-lg font-medium text-sm transition flex items-center justify-center gap-2 text-slate-700 hover:text-slate-900 font-semibold";
+        viewNotes.classList.remove('hidden');
+        viewTasks.classList.add('hidden');
+        filterSelect.classList.add('hidden');
+      }
+      render();
+    }
+
+    function setFilter(filterVal) {
+      state.currentFilter = filterVal;
+      document.getElementById('filterSelect').value = filterVal;
+      if (state.activeTab !== 'tasks') {
+        switchTab('tasks');
+      } else {
+        render();
+      }
+    }
+
+    function handleSearch() {
+      state.searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+      render();
+    }
+
+    function filterNotesByTag(tag) {
+      state.activeTagFilter = tag;
+      renderNotes();
+    }
+
+    // RENDU GLOBAL
+    function render() {
+      renderStats();
+      renderQuickTodos();
+      if (state.activeTab === 'tasks') {
+        renderTasks();
+      } else {
+        renderNotes();
+      }
+    }
+
+    function renderStats() {
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      const todayCount = state.tasks.filter(t => !t.completed && t.dueDate === todayStr).length;
+      const overdueCount = state.tasks.filter(t => !t.completed && t.dueDate && t.dueDate < todayStr).length;
+      const highCount = state.tasks.filter(t => !t.completed && t.priority === 'high').length;
+      const completedCount = state.tasks.filter(t => t.completed).length;
+
+      document.getElementById('statToday').innerText = todayCount;
+      document.getElementById('statOverdue').innerText = overdueCount;
+      document.getElementById('statHigh').innerText = highCount;
+      document.getElementById('statCompleted').innerText = completedCount;
+      document.getElementById('statNotes').innerText = state.notes.length;
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('tasksList');
+      const emptyState = document.getElementById('tasksEmpty');
+      const countBadge = document.getElementById('taskCountBadge');
+      const filterLabel = document.getElementById('filterStatusLabel');
+
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      let filtered = state.tasks.filter(t => {
+        if (state.searchQuery) {
+          const matchTitle = t.title.toLowerCase().includes(state.searchQuery);
+          const matchContent = (t.content || '').toLowerCase().includes(state.searchQuery);
+          const matchProject = (t.project || '').toLowerCase().includes(state.searchQuery);
+          const matchTags = (t.tags || []).some(tag => tag.toLowerCase().includes(state.searchQuery));
+          if (!matchTitle && !matchContent && !matchProject && !matchTags) return false;
+        }
+
+        if (state.currentFilter === 'today') {
+          return !t.completed && (t.dueDate === todayStr || (t.dueDate && t.dueDate < todayStr));
+        } else if (state.currentFilter === 'overdue') {
+          return !t.completed && t.dueDate && t.dueDate < todayStr;
+        } else if (state.currentFilter === 'high') {
+          return !t.completed && t.priority === 'high';
+        } else if (state.currentFilter === 'completed') {
+          return t.completed;
+        }
+        return true;
+      });
+
+      countBadge.innerText = filtered.length;
+      filterLabel.innerText = `Filtre: ${getFilterName(state.currentFilter)}`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      container.innerHTML = filtered.map(task => {
+        const isOverdue = !task.completed && task.dueDate && task.dueDate < todayStr;
+        const priorityColor = task.priority === 'high' ? 'text-amber-700 bg-amber-100 border-amber-300' : 
+                              task.priority === 'medium' ? 'text-sky-700 bg-sky-100 border-sky-300' : 
+                              'text-slate-600 bg-slate-100 border-slate-300';
+        
+        const priorityLabel = task.priority === 'high' ? '🔥 Élevée' : task.priority === 'medium' ? 'Moyenne' : 'Basse';
+
+        const subtaskDoneCount = (task.subtasks || []).filter(s => s.completed).length;
+        const totalSubtasks = (task.subtasks || []).length;
+
+        return `
+          <div class="glass-card rounded-2xl p-5 flex flex-col justify-between transition relative group ${task.completed ? 'opacity-60 bg-slate-50' : ''}">
+            <div class="space-y-3">
+              
+              <div class="flex items-start justify-between gap-3">
+                <label class="flex items-start gap-3 cursor-pointer flex-1">
+                  <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTaskComplete('${task.id}')" class="mt-1 w-4 h-4 rounded border-slate-400 bg-slate-100 text-brand-600 focus:ring-brand-500 cursor-pointer">
+                  <span class="font-semibold text-slate-900 ${task.completed ? 'line-through text-slate-500' : ''}">${escapeHtml(task.title)}</span>
+                </label>
+                
+                <div class="flex items-center gap-1 opacity-90 sm:opacity-0 group-hover:opacity-100 transition">
+                  <button onclick="editItem('task', '${task.id}')" class="p-1.5 text-slate-400 hover:text-brand-600 rounded-lg hover:bg-slate-100" title="Modifier">
+                    <i class="fa-regular fa-pen-to-square text-xs"></i>
+                  </button>
+                  <button onclick="deleteItem('task', '${task.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100" title="Supprimer">
+                    <i class="fa-regular fa-trash-can text-xs"></i>
+                  </button>
+                </div>
+              </div>
+
+              ${task.content ? `
+                <div class="pl-7">
+                  <div class="bg-red-50 border-l-4 border-red-500 p-2.5 rounded-r-xl space-y-1">
+                    <div class="flex items-center gap-1.5 text-[11px] font-bold text-red-600 uppercase tracking-wider">
+                      <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
+                      <span>OBSERVATION :</span>
+                    </div>
+                    <p class="text-xs text-rose-600 font-semibold whitespace-pre-wrap leading-relaxed">${escapeHtml(task.content)}</p>
+                  </div>
+                </div>
+              ` : ''}
+
+              ${totalSubtasks > 0 ? `
+                <div class="pl-7 space-y-1.5 pt-1">
+                  <div class="flex items-center justify-between text-[11px] font-medium text-slate-500">
+                    <span>Étapes: ${subtaskDoneCount}/${totalSubtasks}</span>
+                    <span>${Math.round((subtaskDoneCount/totalSubtasks)*100)}%</span>
+                  </div>
+                  <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                    <div class="h-full bg-brand-600 rounded-full" style="width: ${(subtaskDoneCount/totalSubtasks)*100}%"></div>
+                  </div>
+                  <div class="space-y-1 pt-1">
+                    ${task.subtasks.map(st => `
+                      <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                        <input type="checkbox" ${st.completed ? 'checked' : ''} onchange="toggleSubtask('${task.id}', '${st.id}')" class="w-3 h-3 rounded bg-slate-100 border-slate-300 text-brand-600">
+                        <span class="${st.completed ? 'line-through text-slate-400' : ''}">${escapeHtml(st.text)}</span>
+                      </label>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+
+              <div class="pl-7 flex flex-wrap items-center gap-1.5 pt-1">
+                ${task.project ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-300">📁 ${escapeHtml(task.project)}</span>` : ''}
+                ${(task.tags || []).map(tag => `<span class="px-2 py-0.5 rounded-md text-[10px] bg-slate-100 text-slate-600 border border-slate-200">#${escapeHtml(tag)}</span>`).join('')}
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 pl-7">
+              <div class="flex items-center gap-1.5">
+                <i class="fa-regular fa-clock"></i>
+                <span class="${isOverdue ? 'text-rose-600 font-bold' : ''}">
+                  ${task.dueDate ? formatDate(task.dueDate) : 'Pas d’échéance'}
+                  ${isOverdue ? ' (En retard)' : ''}
+                </span>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px] border font-bold ${priorityColor}">
+                ${priorityLabel}
+              </span>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderNotes() {
+      const container = document.getElementById('notesList');
+      const emptyState = document.getElementById('notesEmpty');
+      const tagsContainer = document.getElementById('tagsFilterContainer');
+
+      const allTags = Array.from(new Set(state.notes.flatMap(n => n.tags || [])));
+      const activeTag = state.activeTagFilter;
+
+      let tagsHTML = `<span class="text-xs text-slate-500 font-medium mr-1">Filtrer :</span>
+        <button onclick="filterNotesByTag(null)" class="px-2.5 py-1 rounded-md text-xs font-medium transition ${!activeTag ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300'}">Tous</button>`;
+      
+      allTags.forEach(tag => {
+        const isActive = activeTag === tag;
+        tagsHTML += `<button onclick="filterNotesByTag('${tag}')" class="px-2.5 py-1 rounded-md text-xs font-medium transition ${isActive ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300'}">#${escapeHtml(tag)}</button>`;
+      });
+      tagsContainer.innerHTML = tagsHTML;
+
+      let filtered = state.notes.filter(n => {
+        if (state.activeTagFilter && !(n.tags || []).includes(state.activeTagFilter)) {
+          return false;
+        }
+        if (state.searchQuery) {
+          const matchTitle = n.title.toLowerCase().includes(state.searchQuery);
+          const matchContent = n.content.toLowerCase().includes(state.searchQuery);
+          const matchTags = (n.tags || []).some(t => t.toLowerCase().includes(state.searchQuery));
+          if (!matchTitle && !matchContent && !matchTags) return false;
+        }
+        return true;
+      });
+
+      filtered.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      container.innerHTML = filtered.map(note => `
+        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between transition relative group border-slate-300 hover:border-purple-400 ${note.pinned ? 'bg-white border-purple-400 ring-2 ring-purple-500/20 shadow-md' : ''}">
+          <div class="space-y-3">
+            
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2">
+                ${note.pinned ? '<i class="fa-solid fa-thumbtack text-purple-600 text-xs" title="Épinglé"></i>' : ''}
+                <h3 class="font-bold text-slate-900 text-base leading-snug">${escapeHtml(note.title)}</h3>
+              </div>
+              
+              <div class="flex items-center gap-1 opacity-90 sm:opacity-0 group-hover:opacity-100 transition">
+                <button onclick="togglePinNote('${note.id}')" class="p-1.5 text-slate-400 hover:text-purple-600 rounded-lg hover:bg-slate-100" title="${note.pinned ? 'Désépingler' : 'Épingler'}">
+                  <i class="fa-solid fa-thumbtack text-xs ${note.pinned ? 'text-purple-600' : ''}"></i>
+                </button>
+                <button onclick="editItem('note', '${note.id}')" class="p-1.5 text-slate-400 hover:text-brand-600 rounded-lg hover:bg-slate-100" title="Modifier">
+                  <i class="fa-regular fa-pen-to-square text-xs"></i>
+                </button>
+                <button onclick="deleteItem('note', '${note.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100" title="Supprimer">
+                  <i class="fa-regular fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="text-xs text-rose-600 font-semibold whitespace-pre-wrap leading-relaxed font-sans bg-red-50 p-3 rounded-xl border border-red-200 max-h-48 overflow-y-auto">
+              ${escapeHtml(note.content)}
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5 pt-1">
+              ${(note.tags || []).map(tag => `
+                <span onclick="filterNotesByTag('${tag}')" class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700 border border-purple-300 cursor-pointer hover:bg-purple-200 transition">
+                  #${escapeHtml(tag)}
+                </span>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+            <span>Créé le ${formatDate(note.createdAt)}</span>
+            <button onclick="copyNoteContent('${note.id}')" class="hover:text-slate-800 transition flex items-center gap-1">
+              <i class="fa-regular fa-copy"></i>
+              <span>Copier</span>
+            </button>
+          </div>
+
+        </div>
+      `).join('');
+    }
+
+    // GESTION TÂCHES ET SUBTASKS
+    function toggleTaskComplete(taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.completed = !task.completed;
+        saveState();
+        render();
+        showToast(task.completed ? "Tâche marquée comme terminée !" : "Tâche réactivée", "success");
+      }
+    }
+
+    function toggleSubtask(taskId, subtaskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task && task.subtasks) {
+        const sub = task.subtasks.find(s => s.id === subtaskId);
+        if (sub) {
+          sub.completed = !sub.completed;
+          saveState();
+          renderTasks();
+        }
+      }
+    }
+
+    function togglePinNote(noteId) {
+      const note = state.notes.find(n => n.id === noteId);
+      if (note) {
+        note.pinned = !note.pinned;
+        saveState();
+        renderNotes();
+        showToast(note.pinned ? "Note épinglée en haut !" : "Note désépinglée", "info");
+      }
+    }
+
+    function deleteItem(type, id) {
+      if (type === 'task') {
+        state.tasks = state.tasks.filter(t => t.id !== id);
+        showToast("Tâche supprimée", "warning");
+      } else {
+        state.notes = state.notes.filter(n => n.id !== id);
+        showToast("Note supprimée", "warning");
+      }
+      saveState();
+      render();
+    }
+
+    function copyNoteContent(noteId) {
+      const note = state.notes.find(n => n.id === noteId);
+      if (note) {
+        const textToCopy = `${note.title}\n\n${note.content}`;
+        const tempTextArea = document.createElement('textarea');
+        tempTextArea.value = textToCopy;
+        document.body.appendChild(tempTextArea);
+        tempTextArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempTextArea);
+        showToast("Contenu de la note copié dans le presse-papier !", "success");
+      }
+    }
+
+    // MODALE GESTION FORMULAIRES
+    function openModal(type = 'task') {
+      document.getElementById('editItemId').value = '';
+      document.getElementById('itemForm').reset();
+      modalSubtasks = [];
+      renderModalSubtasks();
+      setModalType(type);
+      document.getElementById('itemModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('itemModal').classList.add('hidden');
+    }
+
+    function setModalType(type) {
+      document.getElementById('itemTypeInput').value = type;
+      const taskFields = document.getElementById('taskFields');
+      const notePinField = document.getElementById('notePinField');
+      const modalTypeTaskBtn = document.getElementById('modalTypeTaskBtn');
+      const modalTypeNoteBtn = document.getElementById('modalTypeNoteBtn');
+
+      if (type === 'task') {
+        taskFields.classList.remove('hidden');
+        notePinField.classList.add('hidden');
+        modalTypeTaskBtn.className = "px-3 py-1 rounded-md font-semibold text-white bg-brand-600";
+        modalTypeNoteBtn.className = "px-3 py-1 rounded-md font-semibold text-slate-600 hover:text-slate-900";
+      } else {
+        taskFields.classList.add('hidden');
+        notePinField.classList.remove('hidden');
+        modalTypeNoteBtn.className = "px-3 py-1 rounded-md font-semibold text-white bg-purple-600";
+        modalTypeTaskBtn.className = "px-3 py-1 rounded-md font-semibold text-slate-600 hover:text-slate-900";
+      }
+    }
+
+    function editItem(type, id) {
+      openModal(type);
+      document.getElementById('editItemId').value = id;
+
+      if (type === 'task') {
+        const task = state.tasks.find(t => t.id === id);
+        if (!task) return;
+        document.getElementById('formTitle').value = task.title;
+        document.getElementById('formDueDate').value = task.dueDate || '';
+        document.getElementById('formPriority').value = task.priority || 'medium';
+        document.getElementById('formProject').value = task.project || '';
+        document.getElementById('formContent').value = task.content || '';
+        document.getElementById('formTags').value = (task.tags || []).join(', ');
+        modalSubtasks = task.subtasks ? [...task.subtasks] : [];
+        renderModalSubtasks();
+      } else {
+        const note = state.notes.find(n => n.id === id);
+        if (!note) return;
+        document.getElementById('formTitle').value = note.title;
+        document.getElementById('formContent').value = note.content;
+        document.getElementById('formTags').value = (note.tags || []).join(', ');
+        document.getElementById('formPinned').checked = !!note.pinned;
+      }
+    }
+
+    function addSubtaskFromInput() {
+      const input = document.getElementById('newSubtaskInput');
+      const text = input.value.trim();
+      if (text) {
+        modalSubtasks.push({
+          id: 'st-' + Date.now() + Math.random().toString(36).substr(2, 4),
+          text: text,
+          completed: false
+        });
+        input.value = '';
+        renderModalSubtasks();
+      }
+    }
+
+    function removeModalSubtask(stId) {
+      modalSubtasks = modalSubtasks.filter(s => s.id !== stId);
+      renderModalSubtasks();
+    }
+
+    function renderModalSubtasks() {
+      const container = document.getElementById('subtasksContainer');
+      container.innerHTML = modalSubtasks.map(st => `
+        <div class="flex items-center justify-between bg-slate-100 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800">
+          <span>${escapeHtml(st.text)}</span>
+          <button type="button" onclick="removeModalSubtask('${st.id}')" class="text-slate-400 hover:text-rose-600">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('editItemId').value;
+      const type = document.getElementById('itemTypeInput').value;
+      const title = document.getElementById('formTitle').value.trim();
+      const content = document.getElementById('formContent').value.trim();
+      const tagsRaw = document.getElementById('formTags').value;
+      const tags = tagsRaw.split(',').map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
+
+      if (!title) return;
+
+      if (type === 'task') {
+        const dueDate = document.getElementById('formDueDate').value;
+        const priority = document.getElementById('formPriority').value;
+        const project = document.getElementById('formProject').value.trim();
+
+        if (id) {
+          const task = state.tasks.find(t => t.id === id);
+          if (task) {
+            task.title = title;
+            task.content = content;
+            task.dueDate = dueDate;
+            task.priority = priority;
+            task.project = project;
+            task.tags = tags;
+            task.subtasks = modalSubtasks;
+          }
+        } else {
+          const newTask = {
+            id: 't-' + Date.now(),
+            title: title,
+            content: content,
+            dueDate: dueDate,
+            priority: priority,
+            project: project,
+            tags: tags,
+            completed: false,
+            subtasks: modalSubtasks
+          };
+          state.tasks.unshift(newTask);
+        }
+        showToast("Tâche enregistrée avec succès !", "success");
+      } else {
+        const pinned = document.getElementById('formPinned').checked;
+
+        if (id) {
+          const note = state.notes.find(n => n.id === id);
+          if (note) {
+            note.title = title;
+            note.content = content;
+            note.tags = tags;
+            note.pinned = pinned;
+          }
+        } else {
+          const newNote = {
+            id: 'n-' + Date.now(),
+            title: title,
+            content: content,
+            tags: tags,
+            pinned: pinned,
+            createdAt: new Date().toISOString()
+          };
+          state.notes.unshift(newNote);
+        }
+        showToast("Note d'aide-mémoire enregistrée !", "success");
+      }
+
+      saveState();
+      closeModal();
+      render();
+    }
+
+    // DICTÉE VOCALE
+    function initSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) return;
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'fr-FR';
+
+      recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+
+        if (currentVoiceTargetInput) {
+          document.getElementById(currentVoiceTargetInput).value = transcript;
+        } else {
+          document.getElementById('voiceTranscript').innerText = transcript;
+        }
+      };
+
+      recognition.onerror = () => stopSpeechRecognition();
+      recognition.onend = () => { if (isListening) stopSpeechRecognition(); };
+    }
+
+    function toggleVoiceModal() {
+      document.getElementById('voiceModal').classList.toggle('hidden');
+      currentVoiceTargetInput = null;
+    }
+
+    function toggleSpeechRecognition() {
+      if (!recognition) {
+        showToast("Reconnaissance vocale non disponible sur ce navigateur.", "error");
+        return;
+      }
+      isListening ? stopSpeechRecognition() : startSpeechRecognition();
+    }
+
+    function startSpeechRecognition() {
+      if (!recognition) return;
+      try {
+        recognition.start();
+        isListening = true;
+        const btn = document.getElementById('voiceMicBtn');
+        const status = document.getElementById('voiceStatusText');
+        if (btn) btn.classList.add('pulse-record', 'bg-rose-600', 'text-white');
+        if (status) status.innerText = "Écoute en cours... Parlez clairement.";
+      } catch(e) {}
+    }
+
+    function stopSpeechRecognition() {
+      if (!recognition) return;
+      recognition.stop();
+      isListening = false;
+      const btn = document.getElementById('voiceMicBtn');
+      const status = document.getElementById('voiceStatusText');
+      if (btn) btn.classList.remove('pulse-record', 'bg-rose-600', 'text-white');
+      if (status) status.innerText = "Dictée en pause. Cliquez pour relancer.";
+    }
+
+    function startFormVoice(inputId) {
+      if (!recognition) return;
+      currentVoiceTargetInput = inputId;
+      startSpeechRecognition();
+      showToast("Dictée activée pour ce champ", "info");
+    }
+
+    function applyVoiceToNewTask() {
+      const text = document.getElementById('voiceTranscript').innerText.trim();
+      if (!text || text.startsWith('Le texte transcrit')) return;
+      toggleVoiceModal();
+      openModal('task');
+      document.getElementById('formTitle').value = text;
+    }
+
+    function applyVoiceToNewNote() {
+      const text = document.getElementById('voiceTranscript').innerText.trim();
+      if (!text || text.startsWith('Le texte transcrit')) return;
+      toggleVoiceModal();
+      openModal('note');
+      document.getElementById('formTitle').value = "Note vocale - " + new Date().toLocaleDateString('fr-FR');
+      document.getElementById('formContent').value = text;
+    }
+
+    // EXPORT JSON & IMPORT
+    function exportData() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+      const anchor = document.createElement('a');
+      anchor.setAttribute("href", dataStr);
+      anchor.setAttribute("download", `taskmaster_backup_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      showToast("Sauvegarde JSON exportée !", "success");
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (imported.tasks && imported.notes) {
+            state.tasks = imported.tasks;
+            state.notes = imported.notes;
+            state.quickTodos = imported.quickTodos || [];
+            saveState();
+            render();
+            showToast("Données importées avec succès !", "success");
+          }
+        } catch (err) {
+          showToast("Fichier JSON invalide.", "error");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // UTILITAIRES
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function getFilterName(f) {
+      switch(f) {
+        case 'today': return "Aujourd'hui & Retards";
+        case 'overdue': return "En retard";
+        case 'high': return "Priorité élevée";
+        case 'completed': return "Terminées";
+        default: return "Toutes les tâches";
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function showToast(message, type = "info") {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+
+      const colors = {
+        success: 'bg-emerald-800 text-white border-emerald-900',
+        error: 'bg-rose-800 text-white border-rose-900',
+        warning: 'bg-amber-800 text-white border-amber-900',
+        info: 'bg-slate-800 text-white border-slate-900'
+      };
+
+      toast.className = `px-4 py-3 rounded-xl border text-xs font-semibold shadow-2xl transition transform duration-300 pointer-events-auto flex items-center gap-2 ${colors[type] || colors.info}`;
+      toast.innerHTML = `
+        <i class="fa-solid ${type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info'}"></i>
+        <span>${message}</span>
+      `;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
