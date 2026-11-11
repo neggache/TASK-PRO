@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="fr" class="h-full bg-slate-200 text-slate-800">
 <head>
   <meta charset="UTF-8">
@@ -131,7 +131,7 @@
   <!-- MAIN WRAPPER -->
   <div class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
 
-    <!-- ADDITIVE QUICK TO-DO LIST (SANS DÉTAIL) -->
+    <!-- ADDITIVE QUICK TO-DO LIST (AVEC ENREGISTREMENT VOCAL INTEGRÉ) -->
     <div class="glass-card rounded-2xl p-4 bg-white border border-slate-300 shadow-sm space-y-3">
       <div class="flex items-center justify-between">
         <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -141,9 +141,14 @@
         <span id="quickTodoBadge" class="text-xs bg-slate-100 text-slate-600 border border-slate-300 px-2 py-0.5 rounded-full font-semibold">0 tâche</span>
       </div>
 
-      <!-- Input Form -->
+      <!-- Formulaire To-Do Rapide avec bouton Micro -->
       <form onsubmit="addQuickTodo(event)" class="flex gap-2">
-        <input type="text" id="quickTodoInput" placeholder="Saisissez une tâche rapide et appuyez sur Entrée..." class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+        <div class="relative flex-1">
+          <input type="text" id="quickTodoInput" placeholder="Saisissez une tâche rapide ou utilisez le micro..." class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-4 pr-10 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+          <button type="button" id="quickVoiceBtn" onclick="toggleQuickVoice()" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-rose-500 transition rounded-lg" title="Dicter la tâche rapide">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+        </div>
         <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow">
           <i class="fa-solid fa-plus"></i>
           <span>Ajouter</span>
@@ -612,7 +617,7 @@
       }
     }
 
-    // FONCTION EXPORT PDF
+    // FONCTION EXPORT PDF COMPLETEMENT STRUCTURÉE
     function exportPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
@@ -622,7 +627,7 @@
       });
 
       // En-tête du document
-      doc.setFillColor(37, 99, 235); // Bleu Brand
+      doc.setFillColor(37, 99, 235);
       doc.rect(0, 0, 210, 20, 'F');
       
       doc.setTextColor(255, 255, 255);
@@ -1290,7 +1295,7 @@
       render();
     }
 
-    // DICTÉE VOCALE
+    // DICTÉE VOCALE & RECONNAISSANCE SPEECH-TO-TEXT
     function initSpeechRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) return;
@@ -1315,6 +1320,22 @@
 
       recognition.onerror = () => stopSpeechRecognition();
       recognition.onend = () => { if (isListening) stopSpeechRecognition(); };
+    }
+
+    function toggleQuickVoice() {
+      if (!recognition) {
+        showToast("Reconnaissance vocale indisponible sur ce navigateur.", "error");
+        return;
+      }
+      const quickBtn = document.getElementById('quickVoiceBtn');
+      if (isListening && currentVoiceTargetInput === 'quickTodoInput') {
+        stopSpeechRecognition();
+      } else {
+        currentVoiceTargetInput = 'quickTodoInput';
+        startSpeechRecognition();
+        if (quickBtn) quickBtn.classList.add('text-rose-600', 'animate-pulse');
+        showToast("Dictée activée pour la To-Do rapide", "info");
+      }
     }
 
     function toggleVoiceModal() {
@@ -1348,8 +1369,11 @@
       isListening = false;
       const btn = document.getElementById('voiceMicBtn');
       const status = document.getElementById('voiceStatusText');
+      const quickBtn = document.getElementById('quickVoiceBtn');
+
       if (btn) btn.classList.remove('pulse-record', 'bg-rose-600', 'text-white');
       if (status) status.innerText = "Dictée en pause. Cliquez pour relancer.";
+      if (quickBtn) quickBtn.classList.remove('text-rose-600', 'animate-pulse');
     }
 
     function startFormVoice(inputId) {
@@ -1458,4 +1482,28 @@
     }
   </script>
 </body>
-</html>
+</html>         
+        
+     
+     
+
+         
+
+             
+    
+               
+
+      
+   
+     
+       
+        
+    
+           
+     
+       
+  
+      
+   
+
+
